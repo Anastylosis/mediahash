@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # artifacts: false — a library has no binary to ship. A Go module is consumed
+  # from its git tag through the module proxy, never from a release asset, so
+  # this exists for the changelog and the release page rather than for files.
+  release:
+    uses: Anastylosis/.github/.github/workflows/go-release.yml@v1
+    permissions:
+      # contents: write to publish the release and discussions: write to open
+      # its announcement thread; the rest are for attest-build-provenance,
+      # which the shared workflow declares even with artifacts off.
+      contents: write
+      discussions: write
+      id-token: write
+      attestations: write
+    secrets: inherit
+    with:
+      binary-name: mediahash
+      artifacts: false
+      # No manual-smoke-gate, deliberately, though the sibling repos have
+      # one. Theirs bridges a real gap: CI cannot run fss's scraper smoke
+      # tests or drive a live Stash, so a human attests to what the runner
+      # could not check. Nothing here is in that position — the unit suite is
+      # hermetic and complete, and the optional live suite is read-only. A
+      # gate with nothing to attest is a click, not a check.
+      #
+      # The category must already exist; renaming it on GitHub without
+      # changing it here fails the API call mid-release.
+      discussion-category: Announcements
+      install-instructions: |
+        ```sh
+        go get github.com/Anastylosis/mediahash@${{ github.ref_name }}
+        ```
+
+        ```go
+        import "github.com/Anastylosis/mediahash"
+        ```
